@@ -82,6 +82,13 @@ std::vector<uint8_t> NetworkClient::receiveExact(size_t numberOfBytes) {
     return buffer;
 }
 
+void NetworkClient::disconnect() {
+    if (!isConnected()) return;
+    boost::system::error_code ec;
+    this->socket.shutdown(tcp::socket::shutdown_both, ec);
+    this->socket.close(ec);
+}
+
 
 bool NetworkClient::isConnected() const {
     return socket.is_open();
