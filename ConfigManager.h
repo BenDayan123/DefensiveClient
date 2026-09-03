@@ -21,11 +21,11 @@ public:
     ServerConfig() = default;
     ServerConfig(std::string ip, uint16_t port, std::string clientName);
 
-    [[nodiscard]] const std::string& getIp() const { return ip; }
+    [[nodiscard]] const std::string& getIP() const { return ip; }
     [[nodiscard]] uint16_t getPort() const { return port; }
     [[nodiscard]] const std::string& getClientName() const { return clientName; }
 
-    void setIp(const std::string& ip) { this->ip = ip; }
+    void setIP(const std::string& ip) { this->ip = ip; }
     void setPort(uint16_t port) { this->port = port; }
     void setClientName(const std::string& clientName) { this->clientName = clientName; }
 };

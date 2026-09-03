@@ -20,8 +20,15 @@
 using boost::asio::ip::tcp;
 
 int main() {
-    const std::string SERVER_IP = "127.0.0.1";
-    const std::string SERVER_PORT = "5000";
+    // Initialize and load configuration from transfer.json
+    ConfigManager configManager;
+    if (!configManager.loadTransferInfo())
+        return 1;
+
+    const auto& serverConfig = configManager.getServerConfig();
+    const std::string serverIP = serverConfig.getIP();
+    const std::string serverPort = std::to_string(serverConfig.getPort());
+    const std::string clientName = serverConfig.getClientName();
 
     try {
         std::cout << "[*] Initializing Client I/O context...\n" << std::endl;
@@ -29,11 +36,11 @@ int main() {
 
         // Resolve host and port endpoints
         tcp::resolver resolver(io_context);
-        auto endpoints = resolver.resolve(SERVER_IP, SERVER_PORT);
+        auto endpoints = resolver.resolve(serverIP, serverPort);
 
         // Setup socket and connect to server
         tcp::socket socket(io_context);
-        std::cout << "[*] Connecting to (" << SERVER_IP << ":" << SERVER_PORT << ")..." << std::endl;
+        std::cout << "[*] Connecting to (" << serverIP << ":" << serverPort << ")..." << std::endl;
         boost::asio::connect(socket, endpoints);
         std::cout << "[+] Connected successfully to server!" << std::endl;
 
