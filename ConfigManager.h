@@ -11,10 +11,10 @@
 /**
  * @brief Utility class for hexadecimal encoding and decoding.
  */
-class HexConvertor {
+class HexConverter {
 public:
     static std::string toHex(const std::array<uint8_t, 16>& bytes);
-    static std::array<uint8_t, 16> toBytes(const std::string& hexStr);
+    static std::optional<std::array<uint8_t, 16>> toBytes(const std::string& hexStr);
 };
 
 
@@ -54,6 +54,7 @@ public:
 
     const std::string& getName() const { return name; }
     const std::array<uint8_t, 16>& getUUID() const { return uuid; }
+    std::string getUuidHex() const;
     const std::string& getPrivateKeyBase64() const { return privateKeyBase64; }
 
     void setName(const std::string& name) { this->name = name; }
@@ -71,8 +72,11 @@ private:
     ClientInfo clientInfo;
 
     const std::filesystem::path meInfoPath;
+    const std::filesystem::path privKeyPath;
+
 public: 
-    ConfigManager(std::filesystem::path meInfoPath = "me.info");
+    ConfigManager(std::filesystem::path meInfoPath = "me.info",
+        std::filesystem::path privKeyPath = "priv.key");
     ~ConfigManager() = default;
 
     ConfigManager(const ConfigManager&) = delete;
@@ -82,6 +86,7 @@ public:
     const TransferInfo& getTransferInfo() const { return this->transferInfo; }
 
     bool loadClientInfo();
+    bool saveClientInfo();
     bool hasIdentity();
 
 };

@@ -47,7 +47,7 @@ TransferInfo::TransferInfo(std::string ip, uint16_t port, std::string clientName
 
 
 // ==========================================
-// ClientIdentity Implementation
+// ClientInfo Implementation
 // ==========================================
 
 ClientInfo::ClientInfo(std::string name, const std::array<uint8_t, 16>& uuid, std::string privateKeyBase64)
@@ -55,13 +55,17 @@ ClientInfo::ClientInfo(std::string name, const std::array<uint8_t, 16>& uuid, st
     uuid(uuid),
     privateKeyBase64(std::move(privateKeyBase64)) {}
 
+std::string ClientInfo::getUuidHex() const {
+    return HexConverter::toHex(this->uuid);
+}
 
 // ==========================================
 // ConfigManager Implementation
 // ==========================================
 
-ConfigManager::ConfigManager(std::filesystem::path meInfoPath)
-    : meInfoPath(std::move(meInfoPath)) {}
+ConfigManager::ConfigManager(std::filesystem::path meInfoPath, std::filesystem::path privKeyPath)
+    : meInfoPath(std::move(meInfoPath)), 
+    privKeyPath(std::move(privKeyPath)) {}
 
 /**
  * @brief Parses transfer.json configuration file using nlohmann/json.
@@ -168,6 +172,33 @@ bool ConfigManager::loadClientInfo() {
         return true;
 
     } catch (...) {
+        return false;
+    }
+}
+
+bool ConfigManager::saveClientInfo() {
+    try {
+        std::ofstream meFile(meInfoPath, std::ios::trunc);
+        if (!meFile.is_open()) {
+            return false;
+        }
+
+        meFile << clientInfo.getName() << "\n";
+        meFile << clientInfo.getUuidHex() << "\n";
+        meFile << clientInfo.getPrivateKeyBase64() << "\n";
+        meFile.close();
+
+        std::ofstream keyFile(privKeyPath,std::ios::trunc | std::ios::binary);
+        if (!keyFile.is_open()) {
+            return false;
+        }
+
+        keyFile << clientInfo.getPrivateKeyBase64();
+        keyFile.close();
+
+        return true;
+    }
+    catch (...) {
         return false;
     }
 }
