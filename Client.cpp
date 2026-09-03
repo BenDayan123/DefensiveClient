@@ -15,6 +15,8 @@
 #include <boost/asio/read.hpp>
 #include <boost/asio/write.hpp>
 
+#include "ConfigManager.h"
+
 using boost::asio::ip::tcp;
 
 int main() {
