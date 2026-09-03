@@ -15,9 +15,23 @@ ServerConfig::ServerConfig(std::string ip, uint16_t port, std::string clientName
     port(port),
     clientName(std::move(clientName)) {}
 
+
+// ==========================================
+// ClientIdentity Implementation
+// ==========================================
+
+ClientInfo::ClientInfo(std::string name, const std::array<uint8_t, 16>& uuid, std::string privateKeyBase64)
+    : name(std::move(name)),
+    uuid(uuid),
+    privateKeyBase64(std::move(privateKeyBase64)) {}
+
+
 // ==========================================
 // ConfigManager Implementation
 // ==========================================
+
+ConfigManager::ConfigManager(std::filesystem::path meInfoPath)
+    : meInfoPath(std::move(meInfoPath)) {}
 
 /**
  * @brief Parses transfer.json configuration file using nlohmann/json.
@@ -49,7 +63,7 @@ bool ConfigManager::loadTransferInfo(const std::filesystem::path& path) {
 
         const auto& serverSection = configData["server"];
 
-        // Validate existence and primitive types of mandatory fields
+        // Validate existence and primitive types of the fields
         if (!serverSection.contains("ip") || !serverSection["ip"].is_string() ||
             !serverSection.contains("port") || !serverSection["port"].is_number_integer() ||
             !serverSection.contains("client") || !serverSection["client"].is_string()) {

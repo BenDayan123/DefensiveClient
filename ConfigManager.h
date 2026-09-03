@@ -30,10 +30,39 @@ public:
     void setClientName(const std::string& clientName) { this->clientName = clientName; }
 };
 
+/**
+ * @brief Domain model representing local client identity and credentials.
+ */
+class ClientInfo {
+private:
+    std::string name;
+    std::array<uint8_t, 16> uuid{};
+    std::string privateKeyBase64;
+public:
+    ClientInfo() = default;
+    ClientInfo(std::string name, const std::array<uint8_t, 16>& uuid, std::string privateKeyBase64);
+
+    const std::string& getName() const { return name; }
+    const std::array<uint8_t, 16>& getUUID() const { return uuid; }
+    const std::string& getPrivateKeyBase64() const { return privateKeyBase64; }
+
+    void setName(const std::string& name) { this->name = name; }
+    void setUUID(const std::array<uint8_t, 16>& uuid) { this->uuid = uuid; }
+    void setPrivateKeyBase64(const std::string& key) { privateKeyBase64 = key; }
+};
+
+/**
+ * @brief Service responsible for loading, validating, and persisting configuration files.
+ */
 class ConfigManager
 {
+private:
+    ServerConfig serverConfig;
+    ClientInfo clientInfo;
+
+    const std::filesystem::path meInfoPath;
 public: 
-    ConfigManager() = default;
+    ConfigManager(std::filesystem::path meInfoPath = "me.info");
     ~ConfigManager() = default;
 
     ConfigManager(const ConfigManager&) = delete;
@@ -41,8 +70,6 @@ public:
 
     bool loadTransferInfo(const std::filesystem::path& configPath = "transfer.json");
     const ServerConfig& getServerConfig() const { return this->serverConfig; }
-private:
-    ServerConfig serverConfig;
 };
 
 
