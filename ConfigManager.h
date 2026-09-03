@@ -11,15 +11,15 @@
 /**
  * @brief Domain model representing server connection details.
  */
-class ServerConfig {
+class TransferInfo {
 private:
     std::string ip;
     uint16_t port{ 0 };
     std::string clientName;
 
 public:
-    ServerConfig() = default;
-    ServerConfig(std::string ip, uint16_t port, std::string clientName);
+    TransferInfo() = default;
+    TransferInfo(std::string ip, uint16_t port, std::string clientName);
 
     [[nodiscard]] const std::string& getIP() const { return ip; }
     [[nodiscard]] uint16_t getPort() const { return port; }
@@ -57,7 +57,7 @@ public:
 class ConfigManager
 {
 private:
-    ServerConfig serverConfig;
+    TransferInfo transferInfo;
     ClientInfo clientInfo;
 
     const std::filesystem::path meInfoPath;
@@ -69,7 +69,11 @@ public:
     ConfigManager& operator=(const ConfigManager&) = delete;
 
     bool loadTransferInfo(const std::filesystem::path& configPath = "transfer.json");
-    const ServerConfig& getServerConfig() const { return this->serverConfig; }
+    const TransferInfo& getTransferInfo() const { return this->transferInfo; }
+
+    bool loadClientInfo();
+    bool hasIdentity();
+
 };
 
 

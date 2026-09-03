@@ -8,9 +8,9 @@
 using json = nlohmann::json;
 
 // ==========================================
-// ServerConfig Implementation
+// TransferInfo Implementation
 // ==========================================
-ServerConfig::ServerConfig(std::string ip, uint16_t port, std::string clientName)
+TransferInfo::TransferInfo(std::string ip, uint16_t port, std::string clientName)
     : ip(std::move(ip)),
     port(port),
     clientName(std::move(clientName)) {}
@@ -87,9 +87,9 @@ bool ConfigManager::loadTransferInfo(const std::filesystem::path& path) {
             return false;
         }
 
-        this->serverConfig.setIP(ip);
-        this->serverConfig.setPort(static_cast<uint16_t>(rawPort));
-        this->serverConfig.setClientName(clientName);
+        this->transferInfo.setIP(ip);
+        this->transferInfo.setPort(static_cast<uint16_t>(rawPort));
+        this->transferInfo.setClientName(clientName);
 
         return true;
     }
@@ -103,6 +103,38 @@ bool ConfigManager::loadTransferInfo(const std::filesystem::path& path) {
     }
     catch (...) {
         std::cerr << "[-] [ConfigManager] Unknown fatal error occurred." << std::endl;
+        return false;
+    }
+}
+
+bool ConfigManager::hasIdentity() {
+    return std::filesystem::exists(meInfoPath);
+
+}
+
+bool ConfigManager::loadClientInfo() {
+    if (!hasIdentity()) {
+        return false;
+    }
+    try {
+        std::ifstream infoFile(meInfoPath);
+        if (!infoFile.is_open()) {
+            return false;
+        }
+
+        std::string name, uuid, key;
+        if (!std::getline(infoFile, name) || !std::getline(infoFile, uuid) || std::getline(infoFile, key)) {
+            return false;
+        }
+
+        auto uuidBytes = ""; // handle the convertion of the bytes into HEX later
+
+        clientInfo.setName(name);
+        // clientInfo.setUUID(uuidBytes);
+        clientInfo.setPrivateKeyBase64(key);
+        return true;
+
+    } catch (...) {
         return false;
     }
 }
