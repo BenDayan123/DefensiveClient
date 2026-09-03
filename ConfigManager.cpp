@@ -157,10 +157,13 @@ bool ConfigManager::loadClientInfo() {
             return false;
         }
 
-        auto uuidBytes = ""; // handle the convertion of the bytes into HEX later
+        auto uuidBytes = HexConverter::toBytes(uuid);
+        if (!uuidBytes.has_value()) {
+            return false;
+        }
 
         clientInfo.setName(name);
-        // clientInfo.setUUID(uuidBytes);
+        clientInfo.setUUID(*uuidBytes);
         clientInfo.setPrivateKeyBase64(key);
         return true;
 
