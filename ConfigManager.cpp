@@ -8,6 +8,36 @@
 using json = nlohmann::json;
 
 // ==========================================
+// HexConverter Implementation
+// ==========================================
+std::string HexConverter::toHex(const std::array<uint8_t, 16>& bytes){
+    std::ostringstream oss;
+    for (uint8_t b : bytes) {
+        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(b);
+    }
+    return oss.str();
+}
+
+std::optional<std::array<uint8_t, 16>> HexConverter::toBytes(const std::string& hexStr) {
+    if (hexStr.length() != 32) {
+        return std::nullopt;
+    }
+
+    std::array<uint8_t, 16> bytes{};
+    for (size_t i = 0; i < 16; ++i) {
+        std::string bytesChunk = hexStr.substr(i * 2, 2);
+        char* endPtr = nullptr;
+        long val = std::strtol(bytesChunk.c_str(), &endPtr, 16);
+        if (endPtr != bytesChunk.c_str() + 2 || val < 0 || val > 0xFF) {
+            return std::nullopt;
+        }
+        bytes[i] = static_cast<uint8_t>(val);
+    }
+    return bytes;
+}
+
+
+// ==========================================
 // TransferInfo Implementation
 // ==========================================
 TransferInfo::TransferInfo(std::string ip, uint16_t port, std::string clientName)

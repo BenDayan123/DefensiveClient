@@ -9,6 +9,16 @@
 #include <cstdint>
 
 /**
+ * @brief Utility class for hexadecimal encoding and decoding.
+ */
+class HexConvertor {
+public:
+    static std::string toHex(const std::array<uint8_t, 16>& bytes);
+    static std::array<uint8_t, 16> toBytes(const std::string& hexStr);
+};
+
+
+/**
  * @brief Domain model representing server connection details.
  */
 class TransferInfo {
