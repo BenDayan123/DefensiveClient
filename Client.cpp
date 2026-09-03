@@ -1,13 +1,19 @@
 #define _WIN32_WINNT 0x0A00
-#define BOOST_ASIO_DISABLE_BOOST_COROUTINE
-#define BOOST_ASIO_DISABLE_CO_AWAIT
-#define BOOST_ASIO_DISABLE_STD_COROUTINE
-#define BOOST_ASIO_DISABLE_CONCEPTS
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
 
 #include <vector>
 #include <string>
 #include <iostream>
-#include <boost/asio.hpp>
+
+// Specific modular Boost.Asio headers (avoids broken monolithic macro templates)
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/connect.hpp>
+#include <boost/asio/read.hpp>
+#include <boost/asio/write.hpp>
 
 using boost::asio::ip::tcp;
 
@@ -16,7 +22,7 @@ int main() {
     const std::string SERVER_PORT = "5000";
 
     try {
-        std::cout << "[*] Initializing Boost.Asio I/O context..." << std::endl;
+        std::cout << "[*] Initializing Client I/O context...\n" << std::endl;
         boost::asio::io_context io_context;
 
         // Resolve host and port endpoints
@@ -50,7 +56,7 @@ int main() {
         }
         else {
             std::string response(recv_buffer.begin(), recv_buffer.begin() + bytes_received);
-            std::cout << "[<] Received response (" << bytes_received << " bytes): " << response << std::endl;
+            std::cout << "[<] Received response (" << bytes_received << " bytes): \"" << response << "\"" << std::endl;
         }
 
         // Clean up socket
