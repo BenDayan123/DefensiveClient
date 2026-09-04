@@ -19,6 +19,9 @@ NetworkClient::~NetworkClient() {
 
 bool NetworkClient::connect(const std::string& host, uint16_t port) {
     try {
+        if (this->isConnected()) {
+            disconnect();
+        }
         std::cout << "[*] Initializing Client I/O context...\n" << std::endl;
 
         // Resolve host and port endpoints
@@ -26,15 +29,11 @@ bool NetworkClient::connect(const std::string& host, uint16_t port) {
         std::string portStr = std::to_string(port);
         auto endpoints = resolver.resolve(host, portStr);
 
-        if (this->isConnected()) {
-            socket.close();
-        }
-
         std::cout << "[*] Connecting to (" << host << ":" << portStr << ")..." << std::endl;
         boost::asio::connect(socket, endpoints);
         std::cout << "[+] Connected successfully to server!" << std::endl;
 
-       return true;
+        return true;
     }
     catch (const boost::system::system_error& e) {
         std::cerr << "[!] Exception: " << e.what() << std::endl;
@@ -71,19 +70,22 @@ std::vector<uint8_t> NetworkClient::receiveExact(size_t numberOfBytes) {
 
     if (error == boost::asio::error::eof) {
         std::cout << "[-] Server closed connection." << std::endl;
+        disconnect();
+        return {};
     }
     else if (error) {
-        throw boost::system::system_error(error);
+        std::cerr << "[NetworkClient] Receive error: " << error.message() << std::endl;
+        disconnect();
+        return {};
     }
-    else {
-        std::string response(buffer.begin(), buffer.begin() + bytes_received);
-        std::cout << "[<] Received response (" << bytes_received << " bytes): \"" << response << "\"" << std::endl;
-    }
+
+    std::cout << "[<] Received " << bytes_received << " bytes from server." << std::endl;
     return buffer;
 }
 
 void NetworkClient::disconnect() {
     if (!isConnected()) return;
+
     boost::system::error_code ec;
     this->socket.shutdown(tcp::socket::shutdown_both, ec);
     this->socket.close(ec);
