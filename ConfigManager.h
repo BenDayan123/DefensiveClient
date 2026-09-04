@@ -7,14 +7,15 @@
 #include <optional>
 #include <filesystem>
 #include <cstdint>
+#include "Protocol.h"
 
 /**
  * @brief Utility class for hexadecimal encoding and decoding.
  */
 class HexConverter {
 public:
-    static std::string toHex(const std::array<uint8_t, 16>& bytes);
-    static std::optional<std::array<uint8_t, 16>> toBytes(const std::string& hexStr);
+    static std::string toHex(const std::array<uint8_t, Protocol::UUID_SIZE>& bytes);
+    static std::optional<std::array<uint8_t, Protocol::UUID_SIZE>> toBytes(const std::string& hexStr);
 };
 
 
@@ -46,14 +47,14 @@ public:
 class ClientInfo {
 private:
     std::string name;
-    std::array<uint8_t, 16> uuid{};
+    std::array<uint8_t, Protocol::UUID_SIZE> uuid{};
     std::string privateKeyBase64;
 public:
     ClientInfo() = default;
-    ClientInfo(std::string name, const std::array<uint8_t, 16>& uuid, std::string privateKeyBase64);
+    ClientInfo(std::string name, const std::array<uint8_t, Protocol::UUID_SIZE>& uuid, std::string privateKeyBase64);
 
     const std::string& getName() const { return name; }
-    const std::array<uint8_t, 16>& getUUID() const { return uuid; }
+    const std::array<uint8_t, Protocol::UUID_SIZE>& getUUID() const { return uuid; }
     std::string getUuidHex() const;
     const std::string& getPrivateKeyBase64() const { return privateKeyBase64; }
 
@@ -88,7 +89,6 @@ public:
     bool loadClientInfo();
     bool saveClientInfo();
     bool hasIdentity();
-
 };
 
 
