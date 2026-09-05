@@ -65,7 +65,7 @@ std::vector<uint8_t> NetworkClient::receiveExact(size_t numberOfBytes) {
 
     std::vector<uint8_t> buffer(numberOfBytes);
     boost::system::error_code error;
-
+    
     size_t bytes_received = boost::asio::read(this->socket, boost::asio::buffer(buffer), error);
 
     if (error == boost::asio::error::eof) {

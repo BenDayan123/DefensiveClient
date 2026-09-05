@@ -143,7 +143,6 @@ bool ConfigManager::loadTransferInfo(const std::filesystem::path& path) {
 
 bool ConfigManager::hasIdentity() {
     return std::filesystem::exists(meInfoPath);
-
 }
 
 bool ConfigManager::loadClientInfo() {
@@ -188,7 +187,7 @@ bool ConfigManager::saveClientInfo() {
         meFile << clientInfo.getPrivateKeyBase64() << "\n";
         meFile.close();
 
-        std::ofstream keyFile(privKeyPath,std::ios::trunc | std::ios::binary);
+        std::ofstream keyFile(privKeyPath, std::ios::trunc | std::ios::binary);
         if (!keyFile.is_open()) {
             return false;
         }
