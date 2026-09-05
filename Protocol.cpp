@@ -20,12 +20,23 @@ namespace Protocol {
     }
 
     /**
-     * @brief Serializes the 23-byte request header.
+     * @brief Appends an ASCII string into a fixed-size buffer padded with null-bytes.
+     */
+    static void appendFixedString(std::vector<uint8_t>& buffer, const std::string& str, size_t fieldSize) {
+        size_t bytesToCopy = (std::min)(str.length(), fieldSize - 1);
+        size_t currentSize = buffer.size();
+        buffer.resize(currentSize + fieldSize, 0);
+        std::memcpy(buffer.data() + currentSize, str.data(), bytesToCopy);
+    }
+
+    /**
+    * @brief Serializes the 23-byte Request Header:
+    * Client ID (16B) | Version (1B) | Code (2B, LE) | Payload Size (4B, LE)
      */
     static void appendRequestHeader(std::vector<uint8_t>& buffer, const RequestHeader& header) {
         buffer.reserve(buffer.size() + REQUEST_HEADER_SIZE + header.payloadSize);
         buffer.insert(buffer.end(), header.clientId.begin(), header.clientId.end());
-        buffer.push_back(header.version);
+        buffer.push_back(CLIENT_VERSION);
         appendUint16LE(buffer, static_cast<uint16_t>(header.code));
         appendUint32LE(buffer, header.payloadSize);
     }
@@ -40,6 +51,7 @@ namespace Protocol {
         
         std::vector<uint8_t> packet;
         appendRequestHeader(packet, header);
+        appendFixedString(packet, name, NAME_FIELD_SIZE);
 
         return packet;
     }
