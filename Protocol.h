@@ -66,6 +66,17 @@ namespace Protocol {
     public:
         static std::vector<uint8_t> buildRegistration(const std::string& name);
     };
+
+    /**
+     * @brief Parser for incoming server response streams.
+     */
+    class PacketParser {
+    public:
+        /**
+         * @brief Parses a 7-byte buffer into a ResponseHeader.
+         */
+        static std::optional<ResponseHeader> parseHeader(const std::vector<uint8_t>& headerBuffer);
+    }
 };
 
 #endif

@@ -19,6 +19,18 @@ namespace Protocol {
         buffer.push_back(static_cast<uint8_t>((value >> 24) & 0xFF));
     }
 
+    static uint16_t readUint16LE(const uint8_t* ptr) {
+        return static_cast<uint16_t>(ptr[0]) |
+            (static_cast<uint16_t>(ptr[1]) << 8);
+    }
+
+    static uint32_t readUint32LE(const uint8_t* ptr) {
+        return static_cast<uint32_t>(ptr[0]) |
+            (static_cast<uint32_t>(ptr[1]) << 8) |
+            (static_cast<uint32_t>(ptr[2]) << 16) |
+            (static_cast<uint32_t>(ptr[3]) << 24);
+    }
+
     /**
      * @brief Appends an ASCII string into a fixed-size buffer padded with null-bytes.
      */
@@ -54,5 +66,21 @@ namespace Protocol {
         appendFixedString(packet, name, NAME_FIELD_SIZE);
 
         return packet;
+    }
+
+    // ==========================================
+    // PacketParser Implementation
+    // ==========================================
+    std::optional<ResponseHeader> PacketParser::parseHeader(const std::vector<uint8_t>& headerBuffer) {
+        if (headerBuffer.size() < RESPONSE_HEADER_SIZE) {
+            return std::nullopt;
+        }
+
+        ResponseHeader header;
+        header.version = headerBuffer[0];
+        header.code = static_cast<ResponseCode>(readUint16LE(&headerBuffer[1]));
+        header.payloadSize = readUint32LE(&headerBuffer[3]);
+
+        return header;
     }
 }
