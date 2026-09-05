@@ -61,6 +61,11 @@ namespace Protocol {
         ResponseCode code{ ResponseCode::GeneralError };
         uint32_t payloadSize{ 0 };
     };
+
+    class PacketBuilder {
+    public:
+        static std::vector<uint8_t> buildRegistration(const std::string& name);
+    };
 };
 
 #endif
