@@ -76,6 +76,7 @@ namespace Protocol {
          * @brief Parses a 7-byte buffer into a ResponseHeader.
          */
         static std::optional<ResponseHeader> parseHeader(const std::vector<uint8_t>& headerBuffer);
+        static std::optional<std::array<uint8_t, UUID_SIZE>> parseClientIdPayload(const std::vector<uint8_t>& payload);
     };
 };
 

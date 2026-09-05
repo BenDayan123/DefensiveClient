@@ -83,4 +83,14 @@ namespace Protocol {
 
         return header;
     }
+
+    std::optional<std::array<uint8_t, UUID_SIZE>> PacketParser::parseClientIdPayload(const std::vector<uint8_t>& payload) {
+        if (payload.size() < UUID_SIZE) {
+            return std::nullopt;
+        }
+
+        std::array<uint8_t, UUID_SIZE> id{};
+        std::memcpy(id.data(), payload.data(), UUID_SIZE);
+        return id;
+    }
 }
