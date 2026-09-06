@@ -62,6 +62,11 @@ namespace Protocol {
         uint32_t payloadSize{ 0 };
     };
 
+    struct AesKeyResponse {
+        std::array<uint8_t, UUID_SIZE> clientId{};
+        std::vector<uint8_t> encryptedAesKey;
+    };
+
     class PacketBuilder {
     public:
         static std::vector<uint8_t> buildRegistration(const std::string& name);
@@ -81,6 +86,7 @@ namespace Protocol {
          */
         static std::optional<ResponseHeader> parseHeader(const std::vector<uint8_t>& headerBuffer);
         static std::optional<std::array<uint8_t, UUID_SIZE>> parseClientIdPayload(const std::vector<uint8_t>& payload);
+        static std::optional<AesKeyResponse> parseAesKeyPayload(const std::vector<uint8_t>& payload);
     };
 };
 

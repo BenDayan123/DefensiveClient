@@ -123,4 +123,18 @@ namespace Protocol {
         std::memcpy(id.data(), payload.data(), UUID_SIZE);
         return id;
     }
+
+    std::optional<AesKeyResponse> PacketParser::parseAesKeyPayload(const std::vector<uint8_t>& payload) {
+        // Payload must contain at least the 16-byte Client ID plus encrypted key data
+        if (payload.size() < UUID_SIZE)
+            return std::nullopt;
+
+        AesKeyResponse response;
+        // Extract the 16-byte Client UUID
+        std::memcpy(response.clientId.data(), payload.data(), UUID_SIZE);
+        // Extract the RSA-OAEP encrypted AES key (remaining bytes)
+        response.encryptedAesKey.assign(payload.begin() + UUID_SIZE, payload.end());
+
+        return response;
+    }
 }
