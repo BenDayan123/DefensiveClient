@@ -24,6 +24,12 @@ public:
      * @brief Generates an RSA-1024 bit key pair using a cryptographically secure RNG.
      */
     void generateRsaKeys();
+
+    /**
+     * @brief Exports the public key in standard X.509 DER format (exact 160 bytes).
+     * @return Binary vector containing the 160-byte public key.
+     */
+    std::vector<uint8_t> getPublicKeyDer() const;
 };
 
 #endif
