@@ -65,6 +65,10 @@ namespace Protocol {
     class PacketBuilder {
     public:
         static std::vector<uint8_t> buildRegistration(const std::string& name);
+        static std::vector<uint8_t> buildPublicKeyExchange(
+            const std::array<uint8_t, UUID_SIZE>& clientId,
+            const std::string& name,
+            const std::vector<uint8_t>& publicKey);
     };
 
     /**

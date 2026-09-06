@@ -68,6 +68,36 @@ namespace Protocol {
         return packet;
     }
 
+    std::vector<uint8_t> PacketBuilder::buildPublicKeyExchange(
+        const std::array<uint8_t, UUID_SIZE>& clientId,
+        const std::string& name,
+        const std::vector<uint8_t>& publicKey) {
+
+        std::vector<uint8_t> packet;
+        RequestHeader header{};
+        header.code = RequestCode::SendPublicKey;
+        // Total payload size: 255 bytes (client name) + 160 bytes (public key) = 415 bytes
+        header.payloadSize = static_cast<uint32_t>(NAME_FIELD_SIZE + PUBLIC_KEY_SIZE);
+
+        packet.reserve(REQUEST_HEADER_SIZE + header.payloadSize);
+
+        // Append 23-byte request header (UUID, Version 3, Code 826, Payload Size 415)
+        appendRequestHeader(packet, header);
+
+        // Append client name padded with null bytes to 255 bytes
+        appendFixedString(packet, name, NAME_FIELD_SIZE);
+
+        // Append 160-byte RSA public key in DER format (padded with null bytes if shorter)
+        size_t offset = packet.size();
+        packet.resize(offset + PUBLIC_KEY_SIZE, 0);
+        size_t bytesToCopy = (std::min)(publicKey.size(), PUBLIC_KEY_SIZE);
+        std::memcpy(packet.data() + offset, publicKey.data(), bytesToCopy);
+
+        return packet;
+    }
+
+
+
     // ==========================================
     // PacketParser Implementation
     // ==========================================
