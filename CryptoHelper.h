@@ -29,7 +29,15 @@ public:
      * @brief Exports the public key in standard X.509 DER format (exact 160 bytes).
      * @return Binary vector containing the 160-byte public key.
      */
-    std::vector<uint8_t> getPublicKeyDer() const;
+    std::vector<uint8_t> getPublicKeyDER() const;
+
+    /**
+     * @brief Serializes the RSA private key into a single-line Base64 encoded string.
+     * @return Base64 of the private key.
+     */
+    std::string getPrivateKeyBase64() const;
 };
+
+void printKeyBuffer(std::vector<uint8_t> buffer);
 
 #endif

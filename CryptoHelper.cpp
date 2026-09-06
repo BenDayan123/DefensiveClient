@@ -24,7 +24,7 @@ void CryptoHelper::generateRsaKeys() {
 
 }
 
-std::vector<uint8_t> CryptoHelper::getPublicKeyDer() const {
+std::vector<uint8_t> CryptoHelper::getPublicKeyDER() const {
     if (!publicKey) {
         return {};
     }
@@ -39,6 +39,25 @@ std::vector<uint8_t> CryptoHelper::getPublicKeyDer() const {
 
     return pubKeyBuffer;
 }
+
+std::string CryptoHelper::getPrivateKeyBase64() const {
+    if (!privateKey) {
+        return "";
+    }
+
+    // Serialize private key to raw bytes
+    CryptoPP::ByteQueue queue;
+    privateKey->Save(queue);
+
+    // Encode serialized DER bytes to Base64
+    std::string base64Str;
+    CryptoPP::Base64Encoder encoder(new CryptoPP::StringSink(base64Str), false);
+    queue.CopyTo(encoder);
+    encoder.MessageEnd();
+
+    return base64Str;
+}
+
 
 //for testing
 void printKeyBuffer(std::vector<uint8_t> buffer) {
