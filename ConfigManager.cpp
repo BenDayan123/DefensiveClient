@@ -49,12 +49,6 @@ TransferInfo::TransferInfo(std::string ip, uint16_t port, std::string clientName
 // ==========================================
 // ClientInfo Implementation
 // ==========================================
-
-ClientInfo::ClientInfo(std::string name, const std::array<uint8_t, 16>& uuid, std::string privateKeyBase64)
-    : name(std::move(name)),
-    uuid(uuid),
-    privateKeyBase64(std::move(privateKeyBase64)) {}
-
 std::string ClientInfo::getUuidHex() const {
     return HexConverter::toHex(this->uuid);
 }
@@ -141,12 +135,12 @@ bool ConfigManager::loadTransferInfo(const std::filesystem::path& path) {
     }
 }
 
-bool ConfigManager::hasIdentity() {
+bool ConfigManager::hasClientInfo() {
     return std::filesystem::exists(meInfoPath);
 }
 
 bool ConfigManager::loadClientInfo() {
-    if (!hasIdentity()) {
+    if (!hasClientInfo()) {
         return false;
     }
     try {
@@ -155,8 +149,10 @@ bool ConfigManager::loadClientInfo() {
             return false;
         }
 
-        std::string name, uuid, key;
-        if (!std::getline(infoFile, name) || !std::getline(infoFile, uuid) || std::getline(infoFile, key)) {
+        std::string name, uuid, privateKey;
+        if (!std::getline(infoFile, name) || 
+            !std::getline(infoFile, uuid) || 
+            !std::getline(infoFile, privateKey)) {
             return false;
         }
 
@@ -165,9 +161,9 @@ bool ConfigManager::loadClientInfo() {
             return false;
         }
 
-        clientInfo.setName(name);
-        clientInfo.setUUID(*uuidBytes);
-        clientInfo.setPrivateKeyBase64(key);
+        clientInfo.name = std::move(name);
+        clientInfo.uuid = *uuidBytes;
+        clientInfo.privateKeyBase64 = std::move(privateKey);
         return true;
 
     } catch (...) {
@@ -175,24 +171,28 @@ bool ConfigManager::loadClientInfo() {
     }
 }
 
-bool ConfigManager::saveClientInfo() {
+bool ConfigManager::saveClientInfo(const std::string& name,
+                                const std::array<uint8_t, 16>& uuid,
+                                const std::string& privateKeyBase64) {
     try {
         std::ofstream meFile(meInfoPath, std::ios::trunc);
         if (!meFile.is_open()) {
+            std::cerr << "[-] Failed to open " << meInfoPath << " for writing." << std::endl;
             return false;
         }
 
-        meFile << clientInfo.getName() << "\n";
-        meFile << clientInfo.getUuidHex() << "\n";
-        meFile << clientInfo.getPrivateKeyBase64() << "\n";
+        meFile << name << "\n";
+        meFile << HexConverter::toHex(uuid) << "\n";
+        meFile << privateKeyBase64 << "\n";
         meFile.close();
 
         std::ofstream keyFile(privKeyPath, std::ios::trunc | std::ios::binary);
         if (!keyFile.is_open()) {
+            std::cerr << "[-] Failed to open " << privKeyPath << " for writing." << std::endl;
             return false;
         }
 
-        keyFile << clientInfo.getPrivateKeyBase64();
+        keyFile << privateKeyBase64;
         keyFile.close();
 
         return true;

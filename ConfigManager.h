@@ -42,25 +42,14 @@ public:
 };
 
 /**
- * @brief Domain model representing local client identity and credentials.
+ * @brief Object representing local client identity and credentials.
  */
-class ClientInfo {
-private:
+struct ClientInfo {
     std::string name;
-    std::array<uint8_t, Protocol::UUID_SIZE> uuid{};
+    std::array<uint8_t, 16> uuid{};
     std::string privateKeyBase64;
-public:
-    ClientInfo() = default;
-    ClientInfo(std::string name, const std::array<uint8_t, Protocol::UUID_SIZE>& uuid, std::string privateKeyBase64);
 
-    const std::string& getName() const { return name; }
-    const std::array<uint8_t, Protocol::UUID_SIZE>& getUUID() const { return uuid; }
     std::string getUuidHex() const;
-    const std::string& getPrivateKeyBase64() const { return privateKeyBase64; }
-
-    void setName(const std::string& name) { this->name = name; }
-    void setUUID(const std::array<uint8_t, 16>& uuid) { this->uuid = uuid; }
-    void setPrivateKeyBase64(const std::string& key) { privateKeyBase64 = key; }
 };
 
 /**
@@ -83,12 +72,16 @@ public:
     ConfigManager(const ConfigManager&) = delete;
     ConfigManager& operator=(const ConfigManager&) = delete;
 
+    const ClientInfo& getClientInfo() const { return clientInfo; }
+    const TransferInfo& getTransferInfo() const { return transferInfo; }
+
     bool loadTransferInfo(const std::filesystem::path& configPath = "transfer.json");
-    const TransferInfo& getTransferInfo() const { return this->transferInfo; }
 
     bool loadClientInfo();
-    bool saveClientInfo();
-    bool hasIdentity();
+    bool saveClientInfo(const std::string& name,
+                        const std::array<uint8_t, Protocol::UUID_SIZE>& uuid,
+                        const std::string& privateKeyBase64);
+    bool hasClientInfo();
 };
 
 
