@@ -36,6 +36,8 @@ public:
      * @return Base64 of the private key.
      */
     std::string getPrivateKeyBase64() const;
+
+    std::vector<uint8_t> decryptAesKey(const std::vector<uint8_t>& cipherText);
 };
 
 void printKeyBuffer(std::vector<uint8_t> buffer);
