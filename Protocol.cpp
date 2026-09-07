@@ -130,6 +130,24 @@ namespace Protocol {
         return packet;
     }
 
+    std::vector<uint8_t> PacketBuilder::buildCrcStatus(
+        const std::array<uint8_t, UUID_SIZE>& clientId,
+        RequestCode code,
+        const std::string& fileName) {
+
+        RequestHeader header{};
+        header.code = code;
+        header.payloadSize = static_cast<uint32_t>(FILE_NAME_FIELD_SIZE);
+
+        std::vector<uint8_t> packet;
+        packet.reserve(REQUEST_HEADER_SIZE + header.payloadSize);
+
+        appendRequestHeader(packet, header);
+        appendFixedString(packet, fileName, FILE_NAME_FIELD_SIZE);
+
+        return packet;
+    }
+
     // ==========================================
     // PacketParser Implementation
     // ==========================================

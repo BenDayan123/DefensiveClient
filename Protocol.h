@@ -9,6 +9,7 @@
 
 namespace Protocol {
     // Protocol constants
+    const uint8_t MAX_CRC_ATTEMPTS = 4;
     const uint8_t CLIENT_VERSION = 3;
     const size_t UUID_SIZE = 16;
     const size_t FILE_NAME_FIELD_SIZE = 255;
@@ -85,6 +86,12 @@ namespace Protocol {
             uint16_t totalPackets,
             const std::string& fileName,
             const std::vector<uint8_t>& encryptedContent
+        );
+
+        static std::vector<uint8_t> buildCrcStatus(
+            const std::array<uint8_t, UUID_SIZE>& clientId,
+            RequestCode code,
+            const std::string& fileName
         );
     };
 
