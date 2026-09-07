@@ -11,6 +11,8 @@ namespace Protocol {
     // Protocol constants
     const uint8_t CLIENT_VERSION = 3;
     const size_t UUID_SIZE = 16;
+    const size_t FILE_NAME_FIELD_SIZE = 255;
+    const size_t FILE_METADATA_SIZE = 2 * (sizeof(uint32_t) + sizeof(uint16_t)) + FILE_NAME_FIELD_SIZE; // 4 + 4 + 2 + 2 + 255 = 267 bytes metadata
     const size_t NAME_FIELD_SIZE = 255;
     const size_t PUBLIC_KEY_SIZE = 160;
     const size_t REQUEST_HEADER_SIZE = 23;  // 16 (UUID) + 1 (ver) + 2 (code) + 4 (size)
@@ -70,10 +72,20 @@ namespace Protocol {
     class PacketBuilder {
     public:
         static std::vector<uint8_t> buildRegistration(const std::string& name);
+
         static std::vector<uint8_t> buildPublicKeyExchange(
             const std::array<uint8_t, UUID_SIZE>& clientId,
             const std::string& name,
             const std::vector<uint8_t>& publicKey);
+
+        static std::vector<uint8_t> buildSendFile(
+            const std::array<uint8_t, UUID_SIZE>& clientId,
+            uint32_t origFileSize,
+            uint16_t packetNum,
+            uint16_t totalPackets,
+            const std::string& fileName,
+            const std::vector<uint8_t>& encryptedContent
+        );
     };
 
     /**

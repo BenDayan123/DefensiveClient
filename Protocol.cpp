@@ -96,7 +96,39 @@ namespace Protocol {
         return packet;
     }
 
+    std::vector<uint8_t> PacketBuilder::buildSendFile(
+        const std::array<uint8_t, UUID_SIZE>& clientId,
+        uint32_t origFileSize,
+        uint16_t packetNum,
+        uint16_t totalPackets,
+        const std::string& fileName,
+        const std::vector<uint8_t>& encryptedContent) {
 
+        RequestHeader header{};
+        const uint32_t contentSize = static_cast<uint32_t>(encryptedContent.size());
+
+        header.code = RequestCode::SendFile;
+        header.payloadSize = static_cast<uint32_t>(FILE_METADATA_SIZE + contentSize);
+
+        std::vector<uint8_t> packet;
+        packet.reserve(REQUEST_HEADER_SIZE + header.payloadSize);
+
+        // Request header (23 bits): UUID, Version 3, Opcode 828, Payload Size
+        appendRequestHeader(packet, header);
+
+        // File meta data(Little-Endian)
+        appendUint32LE(packet, contentSize);
+        appendUint32LE(packet, origFileSize);
+        appendUint16LE(packet, packetNum);
+        appendUint16LE(packet, totalPackets);
+
+        appendFixedString(packet, fileName, FILE_NAME_FIELD_SIZE);
+
+        // Encrypted file content
+        packet.insert(packet.end(), encryptedContent.begin(), encryptedContent.end());
+
+        return packet;
+    }
 
     // ==========================================
     // PacketParser Implementation
