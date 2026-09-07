@@ -31,13 +31,17 @@ public:
      */
     std::vector<uint8_t> getPublicKeyDER() const;
 
-    /**
+    /**FileName
      * @brief Serializes the RSA private key into a single-line Base64 encoded string.
      * @return Base64 of the private key.
      */
     std::string getPrivateKeyBase64() const;
 
     std::vector<uint8_t> decryptAesKey(const std::vector<uint8_t>& cipherText);
+
+    static std::vector<uint8_t> encryptAesCbc(
+        const std::vector<uint8_t>& aesKey,
+        const std::vector<uint8_t>& plainText);
 };
 
 void printKeyBuffer(std::vector<uint8_t> buffer);
