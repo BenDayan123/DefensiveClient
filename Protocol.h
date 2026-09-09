@@ -106,6 +106,11 @@ namespace Protocol {
             RequestCode code,
             const std::string& fileName
         );
+
+        static std::vector<uint8_t> buildReconnect(
+            const std::array<uint8_t, UUID_SIZE>& clientId,
+            const std::string& name
+        );
     };
 
     /**
