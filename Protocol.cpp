@@ -75,6 +75,7 @@ namespace Protocol {
 
         std::vector<uint8_t> packet;
         RequestHeader header{};
+        header.clientId = clientId;
         header.code = RequestCode::SendPublicKey;
         // Total payload size: 255 bytes (client name) + 160 bytes (public key) = 415 bytes
         header.payloadSize = static_cast<uint32_t>(NAME_FIELD_SIZE + PUBLIC_KEY_SIZE);
@@ -107,6 +108,7 @@ namespace Protocol {
         RequestHeader header{};
         const uint32_t contentSize = static_cast<uint32_t>(encryptedContent.size());
 
+        header.clientId = clientId;
         header.code = RequestCode::SendFile;
         header.payloadSize = static_cast<uint32_t>(FILE_METADATA_SIZE + contentSize);
 
@@ -136,6 +138,7 @@ namespace Protocol {
         const std::string& fileName) {
 
         RequestHeader header{};
+        header.clientId = clientId;
         header.code = code;
         header.payloadSize = static_cast<uint32_t>(FILE_NAME_FIELD_SIZE);
 
