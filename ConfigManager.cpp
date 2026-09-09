@@ -201,3 +201,9 @@ bool ConfigManager::saveClientInfo(const std::string& name,
         return false;
     }
 }
+
+void ConfigManager::removeClientInfo() {
+    std::error_code ec;
+    std::filesystem::remove(meInfoPath, ec);
+    std::filesystem::remove(privKeyPath, ec);
+}

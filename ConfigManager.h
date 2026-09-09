@@ -1,5 +1,5 @@
-#ifndef CONFIFMANAGER_H
-#define CONFIFMANAGER_H
+#ifndef CONFIGMANAGER_H
+#define CONFIGMANAGER_H
 
 #include <string>
 #include <vector>
@@ -17,7 +17,6 @@ public:
     static std::string toHex(const std::array<uint8_t, Protocol::UUID_SIZE>& bytes);
     static std::optional<std::array<uint8_t, Protocol::UUID_SIZE>> toBytes(const std::string& hexStr);
 };
-
 
 /**
  * @brief Domain model representing server connection details.
@@ -78,6 +77,7 @@ public:
     bool loadTransferInfo(const std::filesystem::path& configPath = "transfer.json");
 
     bool loadClientInfo();
+    void removeClientInfo();
     bool saveClientInfo(const std::string& name,
                         const std::array<uint8_t, Protocol::UUID_SIZE>& uuid,
                         const std::string& privateKeyBase64);
