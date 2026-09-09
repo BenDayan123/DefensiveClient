@@ -9,7 +9,7 @@
 
 namespace Protocol {
     // Protocol constants
-    const uint8_t MAX_CRC_ATTEMPTS = 4;
+    const size_t MAX_CRC_ATTEMPTS = 4;
     const uint8_t CLIENT_VERSION = 3;
     const size_t UUID_SIZE = 16;
     const size_t FILE_NAME_FIELD_SIZE = 255;
@@ -18,6 +18,9 @@ namespace Protocol {
     const size_t PUBLIC_KEY_SIZE = 160;
     const size_t REQUEST_HEADER_SIZE = 23;  // 16 (UUID) + 1 (ver) + 2 (code) + 4 (size)
     const size_t RESPONSE_HEADER_SIZE = 7;  // 1 (ver) + 2 (code) + 4 (size)
+
+    // 16 + 4 + 255 + 4 = 279 bytes
+    const size_t CRC_PAYLOAD_EXPECTED_SIZE = UUID_SIZE + sizeof(uint32_t) + FILE_NAME_FIELD_SIZE + sizeof(uint32_t); 
     
     /**
      * @brief Request codes sent from Client to Server.
@@ -70,6 +73,16 @@ namespace Protocol {
         std::vector<uint8_t> encryptedAesKey;
     };
 
+    /**
+     * @brief Holds the unpacked payload from server response 1603 (File CRC).
+     */
+    struct FileCrcResponse {
+        std::array<uint8_t, UUID_SIZE> clientId{};
+        uint32_t contentSize{ 0 };
+        std::string fileName;
+        uint32_t cksum{ 0 };
+    };
+
     class PacketBuilder {
     public:
         static std::vector<uint8_t> buildRegistration(const std::string& name);
@@ -106,6 +119,7 @@ namespace Protocol {
         static std::optional<ResponseHeader> parseHeader(const std::vector<uint8_t>& headerBuffer);
         static std::optional<std::array<uint8_t, UUID_SIZE>> parseClientIdPayload(const std::vector<uint8_t>& payload);
         static std::optional<AesKeyResponse> parseAesKeyPayload(const std::vector<uint8_t>& payload);
+        static std::optional<FileCrcResponse> parseFileCrcPayload(const std::vector<uint8_t>& payload);
     };
 };
 

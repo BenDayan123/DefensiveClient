@@ -187,4 +187,32 @@ namespace Protocol {
 
         return response;
     }
+
+    std::optional<FileCrcResponse> PacketParser::parseFileCrcPayload(const std::vector<uint8_t>& payload) {
+        if (payload.size() < CRC_PAYLOAD_EXPECTED_SIZE) {
+            return std::nullopt;
+        }
+
+        FileCrcResponse resp;
+        size_t offset = 0;
+
+        // 1. Extract 16-byte Client UUID
+        std::memcpy(resp.clientId.data(), payload.data() + offset, UUID_SIZE);
+        offset += UUID_SIZE;
+
+        // 2. Extract original file size
+        resp.contentSize = readUint32LE(payload.data() + offset);
+        offset += sizeof(uint32_t);
+
+        // 3. Extract null-terminated file name
+        const char* namePtr = reinterpret_cast<const char*>(payload.data() + offset);
+        size_t nameLen = strnlen(namePtr, FILE_NAME_FIELD_SIZE);
+        resp.fileName.assign(namePtr, nameLen);
+        offset += FILE_NAME_FIELD_SIZE;
+
+        // 4. Extract 32-bit POSIX CRC checksum
+        resp.cksum = readUint32LE(payload.data() + offset);
+
+        return resp;
+    }
 }
