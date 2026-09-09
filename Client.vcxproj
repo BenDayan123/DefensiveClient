@@ -143,6 +143,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="EncryptedFile.cpp" />
     <ClCompile Include="Client.cpp" />
     <ClCompile Include="ConfigManager.cpp" />
     <ClCompile Include="CryptoHelper.cpp" />
@@ -154,6 +155,7 @@
     <None Include="transfer.json" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="EncryptedFile.h" />
     <ClInclude Include="ConfigManager.h" />
     <ClInclude Include="CryptoHelper.h" />
     <ClInclude Include="NetworkClient.h" />
