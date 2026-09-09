@@ -137,6 +137,23 @@ std::vector<uint8_t> CryptoHelper::encryptAesCbc(
     }
 }
 
+bool CryptoHelper::loadPrivateKeyBase64(const std::string& base64Key) {
+    try {
+        CryptoPP::ByteQueue queue;
+        CryptoPP::StringSource ss(base64Key, true,
+            new CryptoPP::Base64Decoder(new CryptoPP::Redirector(queue)));
+
+        auto key = std::make_unique<CryptoPP::RSA::PrivateKey>();
+        key->Load(queue);
+        this->privateKey = std::move(key);
+        return true;
+    }
+    catch (const std::exception& ex) {
+        std::cerr << "[-] Error loading private key: " << ex.what() << std::endl;
+        return false;
+    }
+}
+
 //TODO: for testing
 void printKeyBuffer(std::vector<uint8_t> buffer) {
     // Loop through each byte in the vector

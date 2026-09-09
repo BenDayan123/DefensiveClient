@@ -37,6 +37,8 @@ public:
      */
     std::string getPrivateKeyBase64() const;
 
+    bool loadPrivateKeyBase64(const std::string& base64Key);
+
     std::vector<uint8_t> decryptAesKey(const std::vector<uint8_t>& cipherText);
 
     static std::vector<uint8_t> encryptAesCbc(
