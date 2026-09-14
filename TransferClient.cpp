@@ -214,9 +214,9 @@ bool TransferClient::transferAndVerify(const EncryptedFileData& fileData) {
                     client.receiveExact(responseHeader->payloadSize);
                 }
 
-                std::cout << "\n=======================================================" << std::endl;
+                std::cout << "\n=================================================================" << std::endl;
                 std::cout << "[SUCCESS] File transfer and verification completed successfully!" << std::endl;
-                std::cout << "=======================================================\n" << std::endl;
+                std::cout << "=================================================================\n" << std::endl;
                 return true;
             }
 
