@@ -144,11 +144,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="EncryptedFile.cpp" />
-    <ClCompile Include="Client.cpp" />
+    <ClCompile Include="Main.cpp" />
     <ClCompile Include="ConfigManager.cpp" />
     <ClCompile Include="CryptoHelper.cpp" />
     <ClCompile Include="NetworkClient.cpp" />
     <ClCompile Include="Protocol.cpp" />
+    <ClCompile Include="TransferClient.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="me.info" />
@@ -160,6 +161,7 @@
     <ClInclude Include="CryptoHelper.h" />
     <ClInclude Include="NetworkClient.h" />
     <ClInclude Include="Protocol.h" />
+    <ClInclude Include="TransferClient.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
