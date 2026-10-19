@@ -152,7 +152,6 @@
     <ClCompile Include="TransferClient.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="me.info" />
     <None Include="transfer.json" />
   </ItemGroup>
   <ItemGroup>

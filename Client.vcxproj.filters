@@ -39,7 +39,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="transfer.json" />
-    <None Include="me.info" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ConfigManager.h">
