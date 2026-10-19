@@ -185,6 +185,25 @@ namespace Protocol {
         return header;
     }
 
+    std::optional<size_t> PacketParser::expectedPayloadSize(ResponseCode code) {
+        switch (code) {
+        case ResponseCode::RegistrationSuccess:
+        case ResponseCode::MessageConfirmed:
+        case ResponseCode::ReconnectRejected:
+            return UUID_SIZE;
+        case ResponseCode::AesKeyReceived:
+        case ResponseCode::ReconnectApproved:
+            return AES_KEY_PAYLOAD_SIZE;
+        case ResponseCode::FileReceivedWithCrc:
+            return CRC_PAYLOAD_EXPECTED_SIZE;
+        case ResponseCode::RegistrationFailed:
+        case ResponseCode::GeneralError:
+            return 0;
+        default:
+            return std::nullopt;
+        }
+    }
+
     std::optional<std::array<uint8_t, UUID_SIZE>> PacketParser::parseClientIdPayload(const std::vector<uint8_t>& payload) {
         if (payload.size() < UUID_SIZE) {
             return std::nullopt;

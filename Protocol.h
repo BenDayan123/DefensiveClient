@@ -11,6 +11,7 @@ namespace Protocol {
     // Protocol constants
     const size_t MAX_CRC_ATTEMPTS = 4;
     const uint8_t CLIENT_VERSION = 3;
+    const uint8_t SERVER_VERSION = 3;
     const size_t UUID_SIZE = 16;
     const size_t FILE_NAME_FIELD_SIZE = 255;
     const size_t FILE_METADATA_SIZE = 2 * (sizeof(uint32_t) + sizeof(uint16_t)) + FILE_NAME_FIELD_SIZE; // 4 + 4 + 2 + 2 + 255 = 267 bytes metadata
@@ -20,8 +21,13 @@ namespace Protocol {
     const size_t RESPONSE_HEADER_SIZE = 7;  // 1 (ver) + 2 (code) + 4 (size)
 
     // 16 + 4 + 255 + 4 = 279 bytes
-    const size_t CRC_PAYLOAD_EXPECTED_SIZE = UUID_SIZE + sizeof(uint32_t) + FILE_NAME_FIELD_SIZE + sizeof(uint32_t); 
-    
+    const size_t CRC_PAYLOAD_EXPECTED_SIZE = UUID_SIZE + sizeof(uint32_t) + FILE_NAME_FIELD_SIZE + sizeof(uint32_t);
+
+    // RSA-1024 ciphertext size: 1024 bits / 8 = 128 bytes
+    const size_t ENCRYPTED_AES_KEY_SIZE = 128;
+    // 16 (UUID) + 128 (encrypted AES key) = 144 bytes
+    const size_t AES_KEY_PAYLOAD_SIZE = UUID_SIZE + ENCRYPTED_AES_KEY_SIZE;
+
     /**
      * @brief Request codes sent from Client to Server.
      */
@@ -66,6 +72,14 @@ namespace Protocol {
         uint8_t version{ 0 };
         ResponseCode code{ ResponseCode::GeneralError };
         uint32_t payloadSize{ 0 };
+    };
+
+    /**
+     * @brief A complete, size-validated server response (header + payload).
+     */
+    struct ServerResponse {
+        ResponseHeader header;
+        std::vector<uint8_t> payload;
     };
 
     struct AesKeyResponse {
@@ -122,6 +136,13 @@ namespace Protocol {
          * @brief Parses a 7-byte buffer into a ResponseHeader.
          */
         static std::optional<ResponseHeader> parseHeader(const std::vector<uint8_t>& headerBuffer);
+
+        /**
+         * @brief Returns the exact payload size the protocol defines for a response code.
+         * @return The size in bytes, or std::nullopt for an unknown code.
+         */
+        static std::optional<size_t> expectedPayloadSize(ResponseCode code);
+
         static std::optional<std::array<uint8_t, UUID_SIZE>> parseClientIdPayload(const std::vector<uint8_t>& payload);
         static std::optional<AesKeyResponse> parseAesKeyPayload(const std::vector<uint8_t>& payload);
         static std::optional<FileCrcResponse> parseFileCrcPayload(const std::vector<uint8_t>& payload);
