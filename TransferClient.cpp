@@ -11,6 +11,7 @@
 #include <fstream>
 #include <array>
 #include <optional>
+#include <algorithm>
 
 #include "ConfigManager.h"
 #include "NetworkClient.h"
@@ -21,8 +22,51 @@
 
 static const std::string SERVER_ERROR_MSG = "server responded with an error";
 
-TransferClient::TransferClient(std::string targetFilePath)
-    : targetFilePath(std::move(targetFilePath)) {}
+// Receives and validates a single server response
+std::optional<Protocol::ServerResponse> TransferClient::receiveResponse(
+    std::initializer_list<Protocol::ResponseCode> acceptedCodes) {
+
+    auto header = Protocol::PacketParser::parseHeader(client.receiveExact(Protocol::RESPONSE_HEADER_SIZE));
+    if (!header.has_value()) {
+        std::cerr << SERVER_ERROR_MSG << " (no valid response header)" << std::endl;
+        return std::nullopt;
+    }
+    const auto code = static_cast<uint16_t>(header->code);
+
+    if (header->version != Protocol::SERVER_VERSION) {
+        std::cerr << "[!] Warning: unexpected server version " << static_cast<int>(header->version) << std::endl;
+    }
+
+    // Never trust the size sent by the server: validate it before allocating anything
+    const auto expectedSize = Protocol::PacketParser::expectedPayloadSize(header->code);
+    if (!expectedSize.has_value() || header->payloadSize != *expectedSize) {
+        std::cerr << SERVER_ERROR_MSG << " (code " << code
+            << ", invalid payload size " << header->payloadSize << ")" << std::endl;
+        client.disconnect();  // the stream is out of sync and can't be trusted anymore
+        return std::nullopt;
+    }
+
+    Protocol::ServerResponse response{ *header, client.receiveExact(header->payloadSize) };
+    if (response.payload.size() != header->payloadSize) {
+        std::cerr << SERVER_ERROR_MSG << " (connection lost while reading the payload)" << std::endl;
+        return std::nullopt;
+    }
+
+    if (std::find(acceptedCodes.begin(), acceptedCodes.end(), header->code) == acceptedCodes.end()) {
+        std::cerr << SERVER_ERROR_MSG << " (unexpected response code " << code << ")" << std::endl;
+        return std::nullopt;
+    }
+
+    // Every accepted response except 1600 (assigns a new ID) and 1606 (rejection) must echo our ID
+    const bool echoesClientId = header->code != Protocol::ResponseCode::RegistrationSuccess &&
+        header->code != Protocol::ResponseCode::ReconnectRejected;
+    if (echoesClientId && !std::equal(clientId.begin(), clientId.end(), response.payload.begin())) {
+        std::cerr << SERVER_ERROR_MSG << " (client ID mismatch in response code " << code << ")" << std::endl;
+        return std::nullopt;
+    }
+
+    return response;
+}
 
 // Handles registration and RSA key exchange (Codes 825 & 826)
 bool TransferClient::registerAndExchangeKeys(const std::string& clientName) {
@@ -36,17 +80,12 @@ bool TransferClient::registerAndExchangeKeys(const std::string& clientName) {
     }
 
     // Receive registration response (Code 1600)
-    auto headerBytes = client.receiveExact(Protocol::RESPONSE_HEADER_SIZE);
-    auto responseHeader = Protocol::PacketParser::parseHeader(headerBytes);
-
-    if (!responseHeader.has_value() ||
-        responseHeader->code != Protocol::ResponseCode::RegistrationSuccess) {
-        std::cerr << SERVER_ERROR_MSG << std::endl;
+    auto registrationResponse = receiveResponse({ Protocol::ResponseCode::RegistrationSuccess });
+    if (!registrationResponse.has_value()) {
         return false;
     }
 
-    auto payloadBytes = client.receiveExact(responseHeader->payloadSize);
-    auto assignedUuidOpt = Protocol::PacketParser::parseClientIdPayload(payloadBytes);
+    auto assignedUuidOpt = Protocol::PacketParser::parseClientIdPayload(registrationResponse->payload);
     if (!assignedUuidOpt.has_value()) {
         std::cerr << SERVER_ERROR_MSG << std::endl;
         return false;
@@ -55,9 +94,12 @@ bool TransferClient::registerAndExchangeKeys(const std::string& clientName) {
 
     std::cout << "[+] Registered successfully (Code 1600)." << std::endl;
 
-    // Generate RSA-1024 key pair and persist credentials
+    // Generate RSA-1024 key pair and must have credentials
     crypto.generateRsaKeys();
-    config.saveClientInfo(clientName, clientId, crypto.getPrivateKeyBase64());
+    if (!config.saveClientInfo(clientName, clientId, crypto.getPrivateKeyBase64())) {
+        std::cerr << "Error: failed to save client credentials (me.info / priv.key)." << std::endl;
+        return false;
+    }
 
     // Send public key (Code 826)
     std::cout << "[*] Sending RSA public key (Code 826)..." << std::endl;
@@ -72,17 +114,12 @@ bool TransferClient::registerAndExchangeKeys(const std::string& clientName) {
     }
 
     // Receive encrypted AES key (Code 1602)
-    headerBytes = client.receiveExact(Protocol::RESPONSE_HEADER_SIZE);
-    responseHeader = Protocol::PacketParser::parseHeader(headerBytes);
-
-    if (!responseHeader.has_value() ||
-        responseHeader->code != Protocol::ResponseCode::AesKeyReceived) {
-        std::cerr << SERVER_ERROR_MSG << std::endl;
+    auto aesResponse = receiveResponse({ Protocol::ResponseCode::AesKeyReceived });
+    if (!aesResponse.has_value()) {
         return false;
     }
 
-    auto aesPayload = client.receiveExact(responseHeader->payloadSize);
-    auto aesOpt = Protocol::PacketParser::parseAesKeyPayload(aesPayload);
+    auto aesOpt = Protocol::PacketParser::parseAesKeyPayload(aesResponse->payload);
     if (!aesOpt.has_value()) {
         std::cerr << SERVER_ERROR_MSG << std::endl;
         return false;
@@ -94,48 +131,49 @@ bool TransferClient::registerAndExchangeKeys(const std::string& clientName) {
 }
 
 // Handles reconnection attempt (Code 827)
-bool TransferClient::tryReconnect(const std::string& clientName, bool& needsRegistration) {
-    if (!config.loadClientInfo() ||
-        !crypto.loadPrivateKeyBase64(config.getClientInfo().privateKeyBase64)) {
+bool TransferClient::tryReconnect(bool& needsRegistration) {
+    // priv.key is the source of truth for the private key; me.info line 3 is a fallback
+    const auto privKeyOpt = config.loadPrivateKey();
+    const bool credentialsLoaded = config.loadClientInfo() &&
+        crypto.loadPrivateKeyBase64(privKeyOpt.value_or(config.getClientInfo().privateKeyBase64));
+
+    if (!credentialsLoaded) {
         std::cerr << "[!] Stored credentials are invalid. Falling back to new registration." << std::endl;
         config.removeClientInfo();
         needsRegistration = true;
         return false;
     }
 
-    clientId = config.getClientInfo().uuid;
+    // Reconnect with the identity stored in me.info, not the name from transfer.json
+    const ClientInfo& storedInfo = config.getClientInfo();
+    clientId = storedInfo.uuid;
     std::cout << "[*] Existing credentials found. Sending reconnect request (Code 827)..." << std::endl;
 
     // Send Reconnect request (Code 827)
-    auto reconnectPacket = Protocol::PacketBuilder::buildReconnect(clientId, clientName);
+    auto reconnectPacket = Protocol::PacketBuilder::buildReconnect(clientId, storedInfo.name);
     if (!client.send(reconnectPacket)) {
         std::cerr << SERVER_ERROR_MSG << std::endl;
         return false;
     }
 
-    // Receive response header
-    auto headerBytes = client.receiveExact(Protocol::RESPONSE_HEADER_SIZE);
-    auto responseHeader = Protocol::PacketParser::parseHeader(headerBytes);
-
-    if (!responseHeader.has_value() ||
-        (responseHeader->code != Protocol::ResponseCode::ReconnectApproved &&
-            responseHeader->code != Protocol::ResponseCode::ReconnectRejected)) {
-        std::cerr << SERVER_ERROR_MSG << std::endl;
+    // Receive reconnect response (Code 1605 or 1606)
+    auto reconnectResponse = receiveResponse({
+        Protocol::ResponseCode::ReconnectApproved,
+        Protocol::ResponseCode::ReconnectRejected });
+    if (!reconnectResponse.has_value()) {
         return false;
     }
 
     // Handle server rejection (Code 1606)
-    if (responseHeader->code == Protocol::ResponseCode::ReconnectRejected) {
+    if (reconnectResponse->header.code == Protocol::ResponseCode::ReconnectRejected) {
         std::cout << "[!] Server rejected reconnect (Code 1606). Registering as a new client..." << std::endl;
-        client.receiveExact(responseHeader->payloadSize);
         config.removeClientInfo();
         needsRegistration = true;
         return false;
     }
 
     // Reconnect approved (Code 1605): extract AES key
-    auto payloadBytes = client.receiveExact(responseHeader->payloadSize);
-    auto aesOpt = Protocol::PacketParser::parseAesKeyPayload(payloadBytes);
+    auto aesOpt = Protocol::PacketParser::parseAesKeyPayload(reconnectResponse->payload);
     if (!aesOpt.has_value()) {
         std::cerr << SERVER_ERROR_MSG << std::endl;
         return false;
@@ -151,7 +189,7 @@ bool TransferClient::authenticate(const std::string& clientName) {
     bool needsRegistration = !config.hasClientInfo();
 
     if (!needsRegistration) {
-        if (tryReconnect(clientName, needsRegistration))
+        if (tryReconnect(needsRegistration))
             return true;
     }
 
@@ -179,19 +217,22 @@ bool TransferClient::transferAndVerify(const EncryptedFileData& fileData) {
             }
 
             // Receive CRC response from server (Code 1603)
-            auto headerBytes = client.receiveExact(Protocol::RESPONSE_HEADER_SIZE);
-            auto responseHeader = Protocol::PacketParser::parseHeader(headerBytes);
+            auto crcResponse = receiveResponse({ Protocol::ResponseCode::FileReceivedWithCrc });
+            if (!crcResponse.has_value()) {
+                return false;
+            }
 
-            if (!responseHeader.has_value() ||
-                responseHeader->code != Protocol::ResponseCode::FileReceivedWithCrc) {
+            auto crcResponseOpt = Protocol::PacketParser::parseFileCrcPayload(crcResponse->payload);
+            if (!crcResponseOpt.has_value()) {
                 std::cerr << SERVER_ERROR_MSG << std::endl;
                 return false;
             }
 
-            auto crcPayload = client.receiveExact(responseHeader->payloadSize);
-            auto crcResponseOpt = Protocol::PacketParser::parseFileCrcPayload(crcPayload);
-            if (!crcResponseOpt.has_value()) {
-                std::cerr << SERVER_ERROR_MSG << std::endl;
+            // The server must report the same encrypted size that was sent
+            if (crcResponseOpt->contentSize != fileData.encryptedContent.size()) {
+                std::cerr << SERVER_ERROR_MSG << " (content size mismatch: sent "
+                    << fileData.encryptedContent.size() << ", server reported "
+                    << crcResponseOpt->contentSize << ")" << std::endl;
                 return false;
             }
 
@@ -205,18 +246,17 @@ bool TransferClient::transferAndVerify(const EncryptedFileData& fileData) {
                     Protocol::RequestCode::CrcValid,
                     fileData.fileName
                 );
-                client.send(confirmPacket);
-
-                // Receive final acknowledgment (Code 1604)
-                headerBytes = client.receiveExact(Protocol::RESPONSE_HEADER_SIZE);
-                responseHeader = Protocol::PacketParser::parseHeader(headerBytes);
-                if (responseHeader.has_value()) {
-                    client.receiveExact(responseHeader->payloadSize);
+                if (!client.send(confirmPacket)) {
+                    std::cerr << SERVER_ERROR_MSG << std::endl;
+                    return false;
                 }
 
-                std::cout << "\n=================================================================" << std::endl;
+                // Receive final acknowledgment (Code 1604)
+                if (!receiveResponse({ Protocol::ResponseCode::MessageConfirmed }).has_value()) {
+                    return false;
+                }
+
                 std::cout << "[SUCCESS] File transfer and verification completed successfully!" << std::endl;
-                std::cout << "=================================================================\n" << std::endl;
                 return true;
             }
 
@@ -232,7 +272,10 @@ bool TransferClient::transferAndVerify(const EncryptedFileData& fileData) {
                     Protocol::RequestCode::CrcInvalidRetry,
                     fileData.fileName
                 );
-                client.send(retryPacket);
+                if (!client.send(retryPacket)) {
+                    std::cerr << SERVER_ERROR_MSG << std::endl;
+                    return false;
+                }
             }
             else {
                 // Final abort after 4 attempts (Code 902)
@@ -242,12 +285,14 @@ bool TransferClient::transferAndVerify(const EncryptedFileData& fileData) {
                     Protocol::RequestCode::CrcInvalidAbort,
                     fileData.fileName
                 );
-                client.send(failPacket);
+                if (!client.send(failPacket)) {
+                    std::cerr << SERVER_ERROR_MSG << std::endl;
+                    return false;
+                }
 
-                headerBytes = client.receiveExact(Protocol::RESPONSE_HEADER_SIZE);
-                responseHeader = Protocol::PacketParser::parseHeader(headerBytes);
-                if (responseHeader.has_value()) {
-                    client.receiveExact(responseHeader->payloadSize);
+                // Receive acknowledgment of the abort (Code 1604)
+                if (!receiveResponse({ Protocol::ResponseCode::MessageConfirmed }).has_value()) {
+                    return false;
                 }
 
                 std::cerr << SERVER_ERROR_MSG << std::endl;
@@ -258,6 +303,27 @@ bool TransferClient::transferAndVerify(const EncryptedFileData& fileData) {
         return false;
     }
 
+bool TransferClient::sendSingleFile(const std::string& filePath) {
+    if (!std::filesystem::exists(filePath)) {
+        std::cerr << "[-] File does not exist on disk: " << filePath << std::endl;
+        return false;
+    }
+
+    auto fileDataOpt = EncryptedFile::createEncryptedFile(filePath, decryptedAesKey);
+    if (!fileDataOpt.has_value()) {
+        std::cerr << "[-] Error preparing encrypted file: " << filePath << std::endl;
+        return false;
+    }
+
+    const auto& fileData = *fileDataOpt;
+    std::cout << "[*] File prepared: '" << fileData.fileName << "'" << std::endl;
+    std::cout << "    Original Size: " << fileData.origFileSize << " bytes" << std::endl;
+    std::cout << "    Encrypted Size: " << fileData.encryptedContent.size() << " bytes" << std::endl;
+    std::cout << "    Local POSIX Checksum: " << fileData.crc << std::endl;
+
+    return transferAndVerify(fileData);
+}
+
 // Executes the client workflow
 bool TransferClient::run() {
     if (!config.loadTransferInfo())
@@ -267,6 +333,7 @@ bool TransferClient::run() {
     const std::string ip = serverConfig.getIP();
     const auto port = serverConfig.getPort();
     const std::string clientName = serverConfig.getClientName();
+    const auto& filesToSend = serverConfig.getFiles();
 
     // Connect to server
     if (!client.connect(ip, port)) {
@@ -286,28 +353,14 @@ bool TransferClient::run() {
         return false;
     }
 
-    // Prepare test file
-    if (!std::filesystem::exists(targetFilePath)) {
-        std::ofstream dummyFile(targetFilePath, std::ios::binary);
-        dummyFile << "Encrypted file transfer test content with POSIX checksum validation.";
-        dummyFile.close();
+    bool allSuccess = true;
+    for (const auto& filePath : filesToSend) {
+        if (!sendSingleFile(filePath)) {
+            allSuccess = false;
+            break;
+        }
     }
 
-    // Encrypt target file
-    auto fileDataOpt = EncryptedFile::createEncryptedFile(targetFilePath, decryptedAesKey);
-    if (!fileDataOpt.has_value()) {
-        std::cerr << "[-] Error preparing encrypted file." << std::endl;
-        return false;
-    }
-    const auto& fileData = *fileDataOpt;
-
-    std::cout << "[*] File prepared: '" << fileData.fileName << "'" << std::endl;
-    std::cout << "    Original Size: " << fileData.origFileSize << " bytes" << std::endl;
-    std::cout << "    Encrypted Size: " << fileData.encryptedContent.size() << " bytes" << std::endl;
-    std::cout << "    Local POSIX Checksum: " << fileData.crc << std::endl;
-
-    // Transmit and verify
-    bool success = transferAndVerify(fileData);
     client.disconnect();
-    return success;
+    return allSuccess;
 }

@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <optional>
+#include <initializer_list>
 
 #include "ConfigManager.h"
 #include "NetworkClient.h"
@@ -16,7 +18,6 @@
  */
 class TransferClient {
 private:
-    std::string targetFilePath;
     ConfigManager config;
     NetworkClient client;
     CryptoHelper crypto;
@@ -25,12 +26,23 @@ private:
     std::vector<uint8_t> decryptedAesKey;
 
     /**
+     * @brief Receives one server response and validates it before use.
+     * Checks the payload size against the protocol before reading it, then checks
+     * the response code, the server version and the echoed client ID.
+     * @param acceptedCodes Response codes that count as success for the current step.
+     * @return The validated response, or std::nullopt (error already printed).
+     */
+    std::optional<Protocol::ServerResponse> receiveResponse(
+        std::initializer_list<Protocol::ResponseCode> acceptedCodes);
+
+    /**
      * @brief Attempts to reconnect using saved credentials (Code 827).
-     * @param clientName The client username.
+     * Uses the name and UUID from me.info and the private key from priv.key
+     * (falling back to me.info line 3).
      * @param needsRegistration Output flag set to true if reconnect is rejected or credentials are bad.
      * @return True if reconnection and AES key retrieval succeeded, false otherwise.
      */
-    bool tryReconnect(const std::string& clientName, bool& needsRegistration);
+    bool tryReconnect(bool& needsRegistration);
 
     /**
      * @brief Registers as a new client (Code 825) and exchanges RSA public key (Code 826).
@@ -53,12 +65,15 @@ private:
      */
     bool transferAndVerify(const EncryptedFileData& fileData);
 
-public:
     /**
-     * @brief Creates a TransferClient instance.
-     * @param targetFilePath Path to the file that will be encrypted and sent.
+     * @brief Encrypts and transmits a single file by path.
+     * @param filePath Path to the file.
+     * @return True if transfer and verification succeeded, false otherwise.
      */
-    TransferClient(std::string targetFilePath = "test.jfif");
+    bool sendSingleFile(const std::string& filePath);
+
+public:
+    TransferClient() = default;
 
     ~TransferClient() = default;
 
