@@ -40,10 +40,11 @@ std::optional<std::array<uint8_t, 16>> HexConverter::toBytes(const std::string& 
 // ==========================================
 // TransferInfo Implementation
 // ==========================================
-TransferInfo::TransferInfo(std::string ip, uint16_t port, std::string clientName)
+TransferInfo::TransferInfo(std::string ip, uint16_t port, std::string clientName, std::vector<std::string> files)
     : ip(std::move(ip)),
     port(port),
-    clientName(std::move(clientName)) {}
+    clientName(std::move(clientName)),
+    files(std::move(files)) {}
 
 
 // ==========================================
@@ -109,6 +110,15 @@ bool ConfigManager::loadTransferInfo(const std::filesystem::path& path) {
             return false;
         }
 
+        std::vector<std::string> fileList;
+        if (configData.contains("files") && configData["files"].is_array()) {
+            for (const auto& item : configData["files"]) {
+                if (item.is_string() && !item.get<std::string>().empty()) {
+                    fileList.push_back(item.get<std::string>());
+                }
+            }
+        }
+
         // Client name string is up to 100 characters
         if (clientName.empty() || clientName.length() > 100) {
             std::cerr << "[-] [ConfigManager] Error: Client name must be between 1 and 100 characters." << std::endl;
@@ -118,6 +128,7 @@ bool ConfigManager::loadTransferInfo(const std::filesystem::path& path) {
         this->transferInfo.setIP(ip);
         this->transferInfo.setPort(static_cast<uint16_t>(rawPort));
         this->transferInfo.setClientName(clientName);
+        this->transferInfo.setFiles(std::move(fileList));
 
         return true;
     }
@@ -168,6 +179,24 @@ bool ConfigManager::loadClientInfo() {
 
     } catch (...) {
         return false;
+    }
+}
+
+std::optional<std::string> ConfigManager::loadPrivateKey() const {
+    try {
+        std::ifstream keyFile(privKeyPath, std::ios::binary);
+        if (!keyFile.is_open()) {
+            return std::nullopt;
+        }
+
+        std::string privateKeyBase64;
+        if (!std::getline(keyFile, privateKeyBase64) || privateKeyBase64.empty()) {
+            return std::nullopt;
+        }
+        return privateKeyBase64;
+    }
+    catch (...) {
+        return std::nullopt;
     }
 }
 

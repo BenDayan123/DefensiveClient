@@ -26,18 +26,21 @@ private:
     std::string ip;
     uint16_t port{ 0 };
     std::string clientName;
+    std::vector<std::string> files;
 
 public:
     TransferInfo() = default;
-    TransferInfo(std::string ip, uint16_t port, std::string clientName);
+    TransferInfo(std::string ip, uint16_t port, std::string clientName, std::vector<std::string> files);
 
     [[nodiscard]] const std::string& getIP() const { return ip; }
     [[nodiscard]] uint16_t getPort() const { return port; }
     [[nodiscard]] const std::string& getClientName() const { return clientName; }
+    [[nodiscard]] const std::vector<std::string>& getFiles() const { return files; }
 
     void setIP(const std::string& ip) { this->ip = ip; }
     void setPort(uint16_t port) { this->port = port; }
     void setClientName(const std::string& clientName) { this->clientName = clientName; }
+    void setFiles(std::vector<std::string> files) { this->files = std::move(files); }
 };
 
 /**
@@ -77,6 +80,13 @@ public:
     bool loadTransferInfo(const std::filesystem::path& configPath = "transfer.json");
 
     bool loadClientInfo();
+
+    /**
+     * @brief Reads the base64 private key from priv.key.
+     * @return The key string, or std::nullopt if the file is missing, unreadable or empty.
+     */
+    std::optional<std::string> loadPrivateKey() const;
+
     void removeClientInfo();
     bool saveClientInfo(const std::string& name,
                         const std::array<uint8_t, Protocol::UUID_SIZE>& uuid,
