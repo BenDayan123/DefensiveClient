@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <optional>
 
 // crctab for linkage across translation units
 extern const uint_fast32_t crctab[8][256];

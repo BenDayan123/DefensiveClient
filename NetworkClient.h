@@ -1,7 +1,9 @@
-#pragma once
 #ifndef NETWORKCLIENT_H
 #define NETWORKCLIENT_H
 
+#include <string>
+#include <vector>
+#include <cstdint>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
