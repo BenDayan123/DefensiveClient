@@ -1,6 +1,8 @@
 #ifndef CRYPTO_H
 #define CRYPTO_H
 
+#include <memory>
+
 // Crypto++ modular headers
 #include <cryptopp/rsa.h>
 #include <cryptopp/osrng.h>
